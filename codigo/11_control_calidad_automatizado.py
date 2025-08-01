@@ -5,7 +5,8 @@ import numpy as np
 import datetime
 import sys
 import os
-
+from pandas.plotting import register_matplotlib_converters
+register_matplotlib_converters()
 ######################################################
 #========== CONTROL DE CALIDAD  ===============
 #####################################################
@@ -36,7 +37,53 @@ print("Se va a cargar el archivo: "+nombre_archivo)
 
 # Leer el archivo de datos y guardarlo en un dataframe de Pandas
 matriz_toga = pd.read_csv(nombre_archivo, sep=r'\s+', names = ["StationID", "StationName", "Date", "D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10", "D11", "D12"], engine = 'python', skiprows = 1, na_values = "9999")
+######################################################################################
 
+matriz= matriz_toga.iloc[:,3:].dropna()
+tamano= matriz.size
+fecha_analisis = str(matriz_toga["Date"][1])
+resto = int(fecha_analisis[:4])%4
+if resto == 0:
+    resto2 = int(fecha_analisis[:4])%100
+
+    if resto2 == 0:
+        resto3 = int(fecha_analisis[:4])%400
+
+        if resto3 == 0:
+            print('Es bisiesto') 
+
+            if tamano == 8784:
+                print('La cantidad de datos esta completa')
+            else:
+                print('La cantidad de datos esta incompleta','...', 'Faltan', 8784-tamano)
+
+
+        else:
+            print('No es bisiesto')
+            
+            if tamano == 8760:
+                print('La cantidad de datos esta completa')
+            else:
+                print('La cantidad de datos esta incompleta','...', 'Faltan', 8760-tamano)
+
+    else:
+        print('Es bisiesto')
+        
+        if tamano  == 8784:
+            print('La cantidad de datos esta completa')
+        else:
+            print('La cantidad de datos esta incompleta','...', 'Faltan', 8784-tamano)
+
+else:
+    print('No es bisiesto')
+    
+    if tamano == 8760:
+        print('La cantidad de datos esta completa')
+    else:
+        print('La cantidad de datos esta incompleta','...', 'Faltan', 8760-tamano)
+
+
+#########################################################################################
 # Obtener el anio del archivo
 fecha = str(matriz_toga["Date"][0])
 print("Se ha cargado el archivo "+nombre_archivo+" y se han encontrado datos del anio "+fecha[0:4]+".")
