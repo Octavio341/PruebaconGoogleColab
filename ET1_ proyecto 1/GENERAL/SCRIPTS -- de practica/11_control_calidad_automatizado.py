@@ -252,14 +252,14 @@ for ind in range(len(lista_datos)):
             if stuckcount == stucklimit-1:
                 for k in range(ind-(stucklimit-1), ind):
                     lista_etiquetas[k]=3
-                    print("---Se han encontrado y etiquetado valores iguales consecutivos (stuck values). Valor: "+str(lista_datos[k])+" Posicion: "+str(k))
+                    #print("---Se han encontrado y etiquetado valores iguales consecutivos (stuck values). Valor: "+str(lista_datos[k])+" Posicion: "+str(k))
                     lista_stuck_datos.append(lista_datos[k])
                     lista_stuck_fechas.append(lista_fechas[k])
                 stucktotal = stucktotal + 1
             
             # Etiquetar el stuckvalue actual
             lista_etiquetas[ind]=3
-            print("---Se han encontrado y etiquetado valores iguales consecutivos (stuck values). Valor: "+str(lista_datos[ind])+" Posicion: "+str(ind))
+            #print("---Se han encontrado y etiquetado valores iguales consecutivos (stuck values). Valor: "+str(lista_datos[ind])+" Posicion: "+str(ind))
             lista_stuck_datos.append(lista_datos[ind])
             lista_stuck_fechas.append(lista_fechas[ind])
 
