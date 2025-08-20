@@ -67,7 +67,7 @@ p = figure(
 p.add_tile(tile_provider)
 
 # --- Marcadores
-r = p.circle(x="x", y="y", size=10, source=source, color="blue", alpha=0.8)
+r = p.scatter(x="x", y="y", size=10, source=source, color="blue", alpha=0.8)
 
 # --- Hover para mostrar nombre
 hover = HoverTool(tooltips=[("Estación", "@nombre")], renderers=[r])
