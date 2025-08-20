@@ -1,11 +1,11 @@
 
 from math import pi, log, tan
-from bokeh.io import output_notebook, show
+from bokeh.io import output_file, show
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource, HoverTool, WMTSTileSource
 
-output_notebook()
-
+# --- Guardar salida en un archivo HTML
+output_file("mapa_estaciones.html")
 # --- Conversión lat/lon a WebMercator
 R = 6378137
 def lonlat_to_mercator(lon, lat):
