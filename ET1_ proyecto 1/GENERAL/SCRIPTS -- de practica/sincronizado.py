@@ -5,10 +5,19 @@ from google.colab import files
 from bokeh.plotting import figure
 from bokeh.embed import components
 from bokeh.resources import CDN
+from bokeh.models import Range1d
+
+#para los datos toga 
+from io import StringIO
+import pandas as pd
+import numpy as np
+from datetime import timedelta
+
+import io
 
 # ===================== FUNCIÓN PRINCIPAL =====================
 # Lista para guardar todos los contenedores de archivos
-
+todos_los_contenedores = []
 def super_resumen(archivos_lista):
     # ===================== VARIABLES GLOBALES =====================
     archivos_seleccionados = []
@@ -59,14 +68,48 @@ def super_resumen(archivos_lista):
     # Simulamos contenedor_final
     contenedor_global = widgets.HBox([widgets.HTML("Contenido del archivo")])
 
+    contenedor_general = []
+    mensajes = []
     bloques = []
-    for archivo in archivos_lista:
-        # Gráfico dummy
-        # Valores de ejemplo
-        x = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-        y = [5, 3, 6, 2, 7, 4, 8, 3, 9, 5]
-        p = figure(width=350, height=160, title="Gráfico")
-        p.line(x, y, line_width=2, color="green")
+    archivos_procesados = set()  # almacena nombres de archivos ya analizados
+
+    for nombre, contenido in archivos_lista.items():
+        mensajes = []
+        mensajes.append(f"Procesando: {nombre}")
+        bloque_texto = "<br>".join(mensajes)
+    
+        matriz_toga = pd.read_csv(io.StringIO(contenido),
+                            sep=r'\s+',
+                            names=["StationID","StationName","Date","D1","D2","D3","D4","D5","D6",
+                                    "D7","D8","D9","D10","D11","D12"],
+                            engine='python', skiprows=2, na_values="9999")
+        
+        matriz_toga["Archivo"] = nombre  # agregamos columna con nombre de archivo
+        #bloques.append(matriz_toga.head())  # guardamos DataFrame de ejemplo
+        #matriz_toga = pd.read_csv(nombre,sep=r'\s+',names =["StationID", "StationName", "Date", "D1", "D2", "D3","D4", "D5", "D6", "D7", "D8", "D9", "D10", "D11", "D12"], engine = 'python', skiprows = 2, na_values = "9999")
+        #display(matriz_toga)
+        lista_fecha= list()
+        lista_datos=list()
+        for filas_dat in matriz_toga.index:
+          fecha = str(matriz_toga["Date"][filas_dat])
+          #fecha es =  195701011
+          if fecha[8:9]== "1": # seleccionamos dia
+            fecha_inicial = datetime.datetime(int(fecha[:4]),int(fecha[4:6]),int(fecha[6:8]))
+            # fecha_inicial es = 1955-08-25 00:00:00
+          else:
+            fecha_inicial = datetime.datetime(int(fecha[:4]),int(fecha[4:6]),int(fecha[6:8]),12)
+            #fecha inicial es = 1960-01-01 12:00:00
+          for dat in ["D1", "D2", "D3", "D4",  "D5", "D6", "D7", "D8", "D9", "D10", "D11", "D12"]:
+            lista_fecha.append(fecha_inicial)
+            lista_datos.append(matriz_toga[dat][filas_dat])
+            #lista_datos.append(matriz_toga[dat][archivo])      #AGRAGMOS LAS LISTA ETIQUETAS
+            fecha_inicial=fecha_inicial+datetime.timedelta(hours=1)
+        
+        x = np.array(lista_fecha)
+        y = np.array(lista_datos)
+
+        p = figure(width=450,x_axis_type='datetime', height=260, title="Gráfico")
+        p.line(x, y, line_width=1, color="blue")
         script, div = components(p)
         recursos = CDN.render()
 
@@ -77,37 +120,25 @@ def super_resumen(archivos_lista):
             display(HTML(recursos + div + script))  # ✅ aquí sí se ejecuta el JS
 
 
-        # Mensajes según tipo
-        if archivo.endswith(".csv"):
-            mensajes = ["Cargando CSV...", "Procesando datos...", "✅ Listo"]
-        elif archivo.endswith(".png"):
-            mensajes = ["Cargando imagen...", "Aplicando filtros...", "✅ Imagen lista"]
-        elif archivo.endswith(".txt"):
-            mensajes = ["Leyendo TXT...", "Limpiando datos...", "✅ Texto procesado"]
-        else:
-            mensajes = ["Generando PDF...", "Insertando gráficos...", "✅ Documento creado"]
-        bloque_texto = "<br>".join(mensajes)
-
         # Checkbox individual
         checkbox = widgets.Checkbox(value=False, description="")
         checkboxes_individuales.append(checkbox)
-        checkbox.observe(lambda change, archivo=archivo: on_change(change, archivo), names='value')
+        checkbox.observe(lambda change, archivo=nombre: on_change(change, archivo), names='value')
 
         # Bloque con gráfico + mensajes + checkbox
         contenedor_final = widgets.HBox([
             salida_grafico,
             widgets.VBox([
-                widgets.HBox([checkbox, widgets.HTML(f"<b>📄 {archivo}</b>")]),
+                widgets.HBox([checkbox, widgets.HTML(f"<b>📄 {nombre}</b>")]),
                 widgets.HTML(f"<div style='font-family:Courier New, monospace; font-size:13px; color:#2D6FA4; height:200px;width:500px'>{bloque_texto}</div>")
             ])
         ], layout=widgets.Layout(border="2px solid #2D6FA4", border_radius="10px",
                                 padding="10px", margin="5px", width="900px",align_items="flex-start"))
         #display(contenedor_final
         contenedor_final.layout.flex = "0 0 auto"
-        bloques.append(contenedor_final)  # acumulamos cada bloque
+        contenedor_general.append(contenedor_final)  # acumulamos cada bloque
 
     # Agrupamos todos los bloques en un contenedor principal
-
     #[2]=================  Cuadros  ==========================
     style_box = {
       'border': '5px solid #2D6FA4',
@@ -140,7 +171,7 @@ def super_resumen(archivos_lista):
       return box
 
     # Crear cajas con contenido variado
-    box1 = make_box("Resumen general",bloques)
+    box1 = make_box("Resumen general",contenedor_general)
     box1.layout.width ='900px'
     box1.layout.height ='500px'
     box2 = make_box("Opciones ",opciones_boton)
@@ -152,8 +183,6 @@ def super_resumen(archivos_lista):
     fila = widgets.VBox([box2,box1])
     fila2 = widgets.HBox([box3])
 
-    display(widgets.HBox([fila,fila2]))  
+    fila_total = widgets.HBox([fila, fila2])
 
-
-
-super_resumen(archivos)
+    return fila_total  # 👈 devuelvo el widget en vez de display
