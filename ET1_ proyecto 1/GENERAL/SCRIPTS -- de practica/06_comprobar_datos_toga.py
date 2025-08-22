@@ -32,6 +32,7 @@ if len(sys.argv) < 2:
 ######################################################################
 # Obtener el nombre del archivo de entrada a procesar de la lista de par'ametros
 nombre_archivo = sys.argv[1]
+print("")
 print("Se va a cargar el archivo: "+nombre_archivo)
 print("")
 

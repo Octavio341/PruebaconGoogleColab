@@ -33,12 +33,12 @@ if len(sys.argv) < 2:
 
 # Obtener el nombre del archivo de entrada a procesar de la lista de par'ametros
 nombre_archivo = sys.argv[1]
-print("Se va a cargar el archivo: "+nombre_archivo)
+#print("Se va a cargar el archivo: "+nombre_archivo)
 
 # Leer el archivo de datos y guardarlo en un dataframe de Pandas
 matriz_toga = pd.read_csv(nombre_archivo, sep=r'\s+', names = ["StationID", "StationName", "Date", "D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10", "D11", "D12"], engine = 'python', skiprows = 1, na_values = "9999")
 ######################################################################################
-
+print("")
 matriz= matriz_toga.iloc[:,3:].dropna()
 tamano= matriz.size
 fecha_analisis = str(matriz_toga["Date"][1])
@@ -87,6 +87,7 @@ else:
 # Obtener el anio del archivo
 fecha = str(matriz_toga["Date"][0])
 print("Se ha cargado el archivo "+nombre_archivo+" y se han encontrado datos del anio "+fecha[0:4]+".")
+print("")
 print("***** Inicio de la revision del archivo *****")
 
 ###################################################
@@ -222,7 +223,8 @@ while ind < len(matriz_toga.index):
 ##########################
 # Prueba de l'inea recta #
 ##########################
-
+print("")
+print("***** analisis de los datos   *****")
 print("Realizando prueba de estabilidad (linea recta)")
 
 stucktotal = 0
