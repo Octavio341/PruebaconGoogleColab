@@ -13,11 +13,30 @@ import pandas as pd
 import numpy as np
 from datetime import timedelta
 import datetime 
-
+import tempfile
 import io
 
 # ===================== FUNCIÓN PRINCIPAL =====================
 # Lista para guardar todos los contenedores de archivos
+# Inicializamos los diccionarios vacíos
+lista_fechas = list()
+lista_datos = list()
+lista_etiquetas = list()
+ind = 0
+
+stucktotal = 0
+stuckcount = 0                  # Contador de valores consecutivos iguales
+stucklimit = 4                  # Cantidad de valores consecutivos  a partir de la cual la serie se considera atorada
+if lista_datos:
+    stuckvalue = lista_datos[0]
+else:
+    stuckvalue = None  # O algún valor por defecto
+    print("⚠️ lista_datos está vacía") 
+        
+stuckindex = 0
+
+lista_stuck_datos = list()
+lista_stuck_fechas = list()
 todos_los_contenedores = []
 def super_resumen(archivos_lista):
     # ===================== VARIABLES GLOBALES =====================
@@ -43,11 +62,13 @@ def super_resumen(archivos_lista):
             cb.value = change['new']  # Esto dispara on_change automáticamente
     salida_error = widgets.Output()
     salida_archivo = widgets.Output()
+    #Button de descarga de archivo TOGA
     def descargar_zip(b):
         zip_filename = "mis_archivos.zip"
         with zipfile.ZipFile(zip_filename, 'w') as zipf:
             for archivo in archivos_seleccionados:
                 if os.path.exists(archivo):
+                    ######################========= LOGICA DE =============###############################
                     zipf.write(archivo, os.path.basename(archivo))
                 else:
                     with salida_error:
@@ -91,6 +112,83 @@ def super_resumen(archivos_lista):
         #display(matriz_toga)
         lista_fecha= list()
         lista_datos=list()
+        ################################################# ANALISIS 
+        # Recorrer todo el arreglo de datos
+        for ind in range(len(lista_datos)):
+
+            # Comenzar a partir del segundo dato
+            if ind > 0:
+
+                # Verificar si el dato que se está revisando actualmente no es igual al stuckvalue
+                if stuckvalue == lista_datos[ind] and ind-1 == stuckindex:
+                    stuckcount = stuckcount + 1
+                else:
+                    stuckcount = 0
+
+                if stuckcount >= stucklimit-1:
+
+                    # Si se trata de los primeros tres valores, etiquetar los dos valores previos
+                    if stuckcount == stucklimit-1:
+                        for k in range(ind-(stucklimit-1), ind):
+                            lista_etiquetas[k]=3
+                            #print("---Se han encontrado y etiquetado valores iguales consecutivos (stuck values). Valor: "+str(lista_datos[k])+" Posicion: "+str(k))
+                            lista_stuck_datos.append(lista_datos[k])
+                            lista_stuck_fechas.append(lista_fechas[k])
+                        stucktotal = stucktotal + 1
+                    
+                    # Etiquetar el stuckvalue actual
+                    lista_etiquetas[ind]=3
+                    #print("---Se han encontrado y etiquetado valores iguales consecutivos (stuck values). Valor: "+str(lista_datos[ind])+" Posicion: "+str(ind))
+                    lista_stuck_datos.append(lista_datos[ind])
+                    lista_stuck_fechas.append(lista_fechas[ind])
+
+                stuckvalue = lista_datos[ind]
+                stuckindex = ind
+
+        contadorpicos = 0
+        spikedetected = True    # Bandera de que un pico ha sido detetado
+        splinedegree = 2        # Grado del spline que ser'a ajustado
+        winsize = 200           # Tamanio de la ventana
+        maxiter = 1             # N'umero m'aximo de iteraciones
+        nsigma = 4              # Valor de sigma a considerar
+        iter = 0                # N'umero de iteraci'on actual
+
+        # Funci'on que obtiene el RMSE
+        def rmse(predictions, targets):
+                return np.sqrt(((predictions - targets) ** 2).mean()) 
+
+        # Crear la lista de indices con elementos de punto flotante
+        lista_indices = list()
+        for i in range(len(lista_datos)):
+            lista_indices.append(float(i))
+
+            while spikedetected and iter < maxiter:
+                spikedetected = False                   # Si no se detecta ning'un pico en la primer iteracion, ya no se hace la segunda
+                for ix in range(len(lista_datos)):      # ix recorrer'a todos los indices de la lista de datos
+                    if (ix < winsize/2):                # Si el indice est'a dentro de los primeros 100 valores
+                        ini=0
+                        end=winsize-1
+                        winix = ix
+                    elif (ix > len(lista_datos) - winsize/2):   # Si el 'indice esta en los 'ultimos 100 datos
+                        ini=len(lista_datos)-winsize
+                        end=len(lista_datos)-1
+                        winix = (winsize-1)-(end-ix+1)
+                    else:                                       # Si el 'indice no est'a ni en los primeros ni en los 'ultimos 100 datos
+                        ini = int(ix - winsize/2)
+                        end = int(ix + winsize/2)
+                        winix = int(winsize/2)
+                    winx = lista_indices[ini:end]
+                    windata = lista_datos[ini:end]
+                    splinefit = np.polyfit(winx, windata, splinedegree)
+                    splinedata = np.polyval(splinefit, winx)
+                    rmse_val = rmse(splinedata, windata) #¿Usar np.array?
+                    if (abs(splinedata[winix]-lista_datos[ix]) >= nsigma*rmse_val):
+                            print ("Se ha encontrado un pico en la posicion "+str(ix)+" y el valor es "+str(lista_datos[ix]))
+                            lista_etiquetas[ix] = 8 
+                            spikedetected = True
+                            contadorpicos = contadorpicos + 1
+                iter=iter+1
+        ############################################################# ----FIN
 
         # Crear la fecha de control
         fecha = str(matriz_toga["Date"][0])
@@ -159,7 +257,12 @@ def super_resumen(archivos_lista):
 
         ###################################################
         datos_validos=(dias_faltantes+dias_existentes)*12-matriz_toga.isna().sum().sum()
-        mensajes.append(f"Hay {str(datos_validos)} datos validos ({str("{0:.2f}".format(datos_validos*100/((dias_faltantes+dias_existentes)*12)))}% ) y {str(matriz_toga.isna().sum().sum())} datos nulos ({str("{0:.2f}".format(matriz_toga.isna().sum().sum()*100/((dias_faltantes+dias_existentes)*12)))}%)")
+        mensajes.append(
+            f"Hay {datos_validos} datos válidos "
+            f"({datos_validos*100/((dias_faltantes+dias_existentes)*12):.2f}%) y "
+            f"{matriz_toga.isna().sum().sum()} datos nulos "
+            f"({matriz_toga.isna().sum().sum()*100/((dias_faltantes+dias_existentes)*12):.2f}%)"
+        )
         bloque_texto = "<br>".join(mensajes)
         #print("Hay "+str(datos_validos)+" datos validos ("+str("{0:.2f}".format(datos_validos*100/((dias_faltantes+dias_existentes)*12)))+"%) y "+str(matriz_toga.isna().sum().sum())+" datos nulos ("+str("{0:.2f}".format(matriz_toga.isna().sum().sum()*100/((dias_faltantes+dias_existentes)*12)))+"%)")
         ##################################### ==========================
