@@ -24,7 +24,7 @@ lista_datos = list()
 lista_etiquetas = list()
 ind = 0
 
-stucktotal = 0
+
 stuckcount = 0                  # Contador de valores consecutivos iguales
 stucklimit = 4                  # Cantidad de valores consecutivos  a partir de la cual la serie se considera atorada
 if lista_datos:
@@ -46,6 +46,7 @@ def super_resumen(archivos_lista):
     # ===================== FUNCIONES GLOBALES =====================
     def actualizar_mensaje():
         mensaje = "Estos son los archivos que convertiremos:<br>" + "<br>".join(archivos_seleccionados)
+
         salida.value = mensaje
 
     def on_change(change, archivo):
@@ -68,6 +69,9 @@ def super_resumen(archivos_lista):
         with zipfile.ZipFile(zip_filename, 'w') as zipf:
             for archivo in archivos_seleccionados:
                 if os.path.exists(archivo):
+                    print(archivo)
+                    print(lista_etiquetas)
+                    print(lista_datos)
                     ######################========= LOGICA DE =============###############################
                     zipf.write(archivo, os.path.basename(archivo))
                 else:
@@ -110,10 +114,25 @@ def super_resumen(archivos_lista):
         #bloques.append(matriz_toga.head())  # guardamos DataFrame de ejemplo
         #matriz_toga = pd.read_csv(nombre,sep=r'\s+',names =["StationID", "StationName", "Date", "D1", "D2", "D3","D4", "D5", "D6", "D7", "D8", "D9", "D10", "D11", "D12"], engine = 'python', skiprows = 2, na_values = "9999")
         #display(matriz_toga)
-        lista_fecha= list()
-        lista_datos=list()
+        for filas_dat in matriz_toga.index:
+          fecha = str(matriz_toga["Date"][filas_dat])
+          #fecha es =  195701011
+          if fecha[8:9]== "1": # seleccionamos dia
+            fecha_inicial = datetime.datetime(int(fecha[:4]),int(fecha[4:6]),int(fecha[6:8]))
+            # fecha_inicial es = 1955-08-25 00:00:00
+          else:
+            fecha_inicial = datetime.datetime(int(fecha[:4]),int(fecha[4:6]),int(fecha[6:8]),12)
+            #fecha inicial es = 1960-01-01 12:00:00
+          for dat in ["D1", "D2", "D3", "D4",  "D5", "D6", "D7", "D8", "D9", "D10", "D11", "D12"]:
+            lista_fechas.append(fecha_inicial)
+            lista_datos.append(matriz_toga[dat][filas_dat])
+            lista_etiquetas.append(0)
+            #lista_datos.append(matriz_toga[dat][archivo])      #AGRAGMOS LAS LISTA ETIQUETAS
+            fecha_inicial=fecha_inicial+datetime.timedelta(hours=1)
         ################################################# ANALISIS 
         # Recorrer todo el arreglo de datos
+        stuckvalue = lista_datos[0]
+        stucktotal = 0
         for ind in range(len(lista_datos)):
 
             # Comenzar a partir del segundo dato
@@ -162,34 +181,34 @@ def super_resumen(archivos_lista):
         for i in range(len(lista_datos)):
             lista_indices.append(float(i))
 
-            while spikedetected and iter < maxiter:
-                spikedetected = False                   # Si no se detecta ning'un pico en la primer iteracion, ya no se hace la segunda
-                for ix in range(len(lista_datos)):      # ix recorrer'a todos los indices de la lista de datos
-                    if (ix < winsize/2):                # Si el indice est'a dentro de los primeros 100 valores
-                        ini=0
-                        end=winsize-1
-                        winix = ix
-                    elif (ix > len(lista_datos) - winsize/2):   # Si el 'indice esta en los 'ultimos 100 datos
-                        ini=len(lista_datos)-winsize
-                        end=len(lista_datos)-1
-                        winix = (winsize-1)-(end-ix+1)
-                    else:                                       # Si el 'indice no est'a ni en los primeros ni en los 'ultimos 100 datos
-                        ini = int(ix - winsize/2)
-                        end = int(ix + winsize/2)
-                        winix = int(winsize/2)
-                    winx = lista_indices[ini:end]
-                    windata = lista_datos[ini:end]
-                    splinefit = np.polyfit(winx, windata, splinedegree)
-                    splinedata = np.polyval(splinefit, winx)
-                    rmse_val = rmse(splinedata, windata) #¿Usar np.array?
-                    if (abs(splinedata[winix]-lista_datos[ix]) >= nsigma*rmse_val):
-                            print ("Se ha encontrado un pico en la posicion "+str(ix)+" y el valor es "+str(lista_datos[ix]))
-                            lista_etiquetas[ix] = 8 
-                            spikedetected = True
-                            contadorpicos = contadorpicos + 1
-                iter=iter+1
-        ############################################################# ----FIN
+        while spikedetected and iter < maxiter:
+            spikedetected = False                   # Si no se detecta ning'un pico en la primer iteracion, ya no se hace la segunda
+            for ix in range(len(lista_datos)):      # ix recorrer'a todos los indices de la lista de datos
+                if (ix < winsize/2):                # Si el indice est'a dentro de los primeros 100 valores
+                    ini=0
+                    end=winsize-1
+                    winix = ix
+                elif (ix > len(lista_datos) - winsize/2):   # Si el 'indice esta en los 'ultimos 100 datos
+                    ini=len(lista_datos)-winsize
+                    end=len(lista_datos)-1
+                    winix = (winsize-1)-(end-ix+1)
+                else:                                       # Si el 'indice no est'a ni en los primeros ni en los 'ultimos 100 datos
+                    ini = int(ix - winsize/2)
+                    end = int(ix + winsize/2)
+                    winix = int(winsize/2)
+                winx = lista_indices[ini:end]
+                windata = lista_datos[ini:end]
 
+                splinefit = np.polyfit(winx, windata, splinedegree)
+                splinedata = np.polyval(splinefit, winx)
+                rmse_val = rmse(splinedata, windata) #¿Usar np.array?
+                if (abs(splinedata[winix]-lista_datos[ix]) >= nsigma*rmse_val):
+                        print ("Se ha encontrado un pico en la posicion "+str(ix)+" y el valor es "+str(lista_datos[ix]))
+                        lista_etiquetas[ix] = 8 
+                        spikedetected = True
+                        contadorpicos = contadorpicos + 1
+            iter=iter+1
+        ############################################################# ----FIN
         # Crear la fecha de control
         fecha = str(matriz_toga["Date"][0])
         fecha_control=datetime.datetime(int(fecha[:4]),1,1)
@@ -266,22 +285,9 @@ def super_resumen(archivos_lista):
         bloque_texto = "<br>".join(mensajes)
         #print("Hay "+str(datos_validos)+" datos validos ("+str("{0:.2f}".format(datos_validos*100/((dias_faltantes+dias_existentes)*12)))+"%) y "+str(matriz_toga.isna().sum().sum())+" datos nulos ("+str("{0:.2f}".format(matriz_toga.isna().sum().sum()*100/((dias_faltantes+dias_existentes)*12)))+"%)")
         ##################################### ==========================
-        for filas_dat in matriz_toga.index:
-          fecha = str(matriz_toga["Date"][filas_dat])
-          #fecha es =  195701011
-          if fecha[8:9]== "1": # seleccionamos dia
-            fecha_inicial = datetime.datetime(int(fecha[:4]),int(fecha[4:6]),int(fecha[6:8]))
-            # fecha_inicial es = 1955-08-25 00:00:00
-          else:
-            fecha_inicial = datetime.datetime(int(fecha[:4]),int(fecha[4:6]),int(fecha[6:8]),12)
-            #fecha inicial es = 1960-01-01 12:00:00
-          for dat in ["D1", "D2", "D3", "D4",  "D5", "D6", "D7", "D8", "D9", "D10", "D11", "D12"]:
-            lista_fecha.append(fecha_inicial)
-            lista_datos.append(matriz_toga[dat][filas_dat])
-            #lista_datos.append(matriz_toga[dat][archivo])      #AGRAGMOS LAS LISTA ETIQUETAS
-            fecha_inicial=fecha_inicial+datetime.timedelta(hours=1)
         
-        x = np.array(lista_fecha)
+        
+        x = np.array(lista_fechas)
         y = np.array(lista_datos)
 
         p = figure(width=450,x_axis_type='datetime', height=260, title="Gráfico")
