@@ -1,5 +1,5 @@
 import ipywidgets as widgets
-from IPython.display import display, HTML
+from IPython.display import clear_output, display, HTML
 import zipfile, os
 from google.colab import files
 from bokeh.plotting import figure
@@ -113,8 +113,14 @@ def super_resumen(archivos_lista):
     mensajes = []
     bloques = []
     archivos_procesados = set()  # almacena nombres de archivos ya analizados
-
+    contador = 0
     for nombre, contenido in archivos_lista.items():
+        global lista_fechas, lista_datos, lista_etiquetas  # 👈 importante
+        lista_fechas.clear()
+        lista_datos.clear()
+        lista_etiquetas.clear()
+
+
         mensajes = []
         mensajes.append(f"Procesando: {nombre}")
         bloque_texto = "<br>".join(mensajes)
@@ -301,7 +307,7 @@ def super_resumen(archivos_lista):
         #print("Hay "+str(datos_validos)+" datos validos ("+str("{0:.2f}".format(datos_validos*100/((dias_faltantes+dias_existentes)*12)))+"%) y "+str(matriz_toga.isna().sum().sum())+" datos nulos ("+str("{0:.2f}".format(matriz_toga.isna().sum().sum()*100/((dias_faltantes+dias_existentes)*12)))+"%)")
         ##################################### ==========================
         
-        
+
         x = np.array(lista_fechas)
         y = np.array(lista_datos)
 
@@ -315,8 +321,7 @@ def super_resumen(archivos_lista):
         salida_grafico = widgets.Output()
         with salida_grafico:
             display(HTML(recursos + div + script))  # ✅ aquí sí se ejecuta el JS
-
-
+            
         # Checkbox individual
         checkbox = widgets.Checkbox(value=False, description="")
         checkboxes_individuales.append(checkbox)
