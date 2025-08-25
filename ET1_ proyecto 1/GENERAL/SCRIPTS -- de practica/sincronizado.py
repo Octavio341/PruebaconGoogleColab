@@ -63,17 +63,32 @@ def super_resumen(archivos_lista):
             cb.value = change['new']  # Esto dispara on_change automáticamente
     salida_error = widgets.Output()
     salida_archivo = widgets.Output()
+    salida_proceso = widgets.Output()
     #Button de descarga de archivo TOGA
     def descargar_zip(b):
         zip_filename = "mis_archivos.zip"
         with zipfile.ZipFile(zip_filename, 'w') as zipf:
             for archivo in archivos_seleccionados:
                 if os.path.exists(archivo):
-                    print(archivo)
-                    print(lista_etiquetas)
-                    print(lista_datos)
+                    #print("Procesando:", archivo)
+                    # Crear nombre único de salida
+                    nombre_salida = os.path.splitext(os.path.basename(archivo))[0] + "_procesado.txt"
+                    ruta_salida = os.path.join(tempfile.gettempdir(), nombre_salida)
+
+                    with open(ruta_salida, 'w+') as archivo_salida:
+                        archivo_salida.write("Contenido de prueba\n")
+                        with salida_proceso:
+                          print("✅ Archivo creado en:", ruta_salida)
+
+                        # Escribir datos
+                        for ind in range(len(lista_datos)):
+                            archivo_salida.write(
+                                lista_fechas[ind].strftime("%Y-%m-%d %H:%M:%S") + " " +
+                                str(lista_datos[ind]) + " " +
+                                str(lista_etiquetas[ind]) + "\n"
+                            )
                     ######################========= LOGICA DE =============###############################
-                    zipf.write(archivo, os.path.basename(archivo))
+                    zipf.write(ruta_salida, os.path.basename(ruta_salida))
                 else:
                     with salida_error:
                       print(f"⚠️ No se encontró: {archivo}")
@@ -89,7 +104,7 @@ def super_resumen(archivos_lista):
 
     opciones_boton= widgets.HBox([seleccionar_todo, boton_descargar])
   
-    salida_resultados=widgets.HBox([salida,salida_error])
+    salida_resultados=widgets.HBox([salida,salida_error,salida_proceso])
 
     # Simulamos contenedor_final
     contenedor_global = widgets.HBox([widgets.HTML("Contenido del archivo")])
